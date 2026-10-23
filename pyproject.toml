@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mygrid-modbus"
+version = "0.1.0"
+description = "Typed async Modbus TCP client for MyGrid ModuleTwo home batteries"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "mygrid-modbus contributors"}]
+keywords = ["mygrid", "modbus", "battery", "asyncio", "home-assistant"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = ["pymodbus>=3.13.1,<4"]
+
+[project.urls]
+Documentation = "https://github.com/tjorim/mygrid-modbus#readme"
+Source = "https://github.com/tjorim/mygrid-modbus"
+Issues = "https://github.com/tjorim/mygrid-modbus/issues"
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.3",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.2",
+    "mypy==2.4.0",
+    "build>=1.3,<2",
+    "twine==7.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mygrid_modbus"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src", "/tests", "/docs", "/scripts", "/README.md", "/LICENSE",
+    "/pyproject.toml", "/uv.lock", "/.python-version",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "--strict-markers --cov=mygrid_modbus --cov-report=term-missing --cov-report=xml --cov-fail-under=95"
+filterwarnings = ["error"]
+markers = ["simulator: real TCP protocol tests against a local battery simulator"]
+
+[tool.coverage.run]
+branch = true
+source = ["mygrid_modbus"]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+follow_imports = "silent"
+files = ["src/mygrid_modbus"]
