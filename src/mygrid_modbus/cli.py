@@ -2,8 +2,8 @@
 
 import argparse
 import asyncio
-import json
 from dataclasses import asdict
+import json
 
 from modbus_connection import ModbusError
 from modbus_connection.cli_helper import add_connection_args, connect_from_args
@@ -16,18 +16,16 @@ def parser() -> argparse.ArgumentParser:
     """Offer only the TCP socket transport defined by the device manual."""
     result = argparse.ArgumentParser(description=__doc__)
     add_connection_args(result, connections=(("tcp", "socket"),))
-    result.add_argument(
-        "--raw", action="store_true", help="Include replayable raw registers"
-    )
+    result.add_argument("--raw", action="store_true", help="Include replayable raw registers")
     return result
 
 
 async def async_query(args: argparse.Namespace) -> int:
-    """The query owns its connection; it never writes any register."""
+    """Query the battery on a connection this helper owns; never write any register."""
     try:
         connection = await connect_from_args(args)
     except (ModbusError, OSError, TimeoutError) as err:
-        print(f"Could not connect: {err}")
+        print(f"Could not connect: {err}")  # noqa: T201 - the CLI exists to print
         return 1
     try:
         device = MyGridDevice(connection.for_unit(UNIT_ID))
@@ -35,11 +33,12 @@ async def async_query(args: argparse.Namespace) -> int:
         result: dict[str, object] = {"data": asdict(device.snapshot)}
         if args.raw:
             result["registers"] = await device.async_read_raw()
-        print(json.dumps(result, indent=2))
-        return 0
+        print(json.dumps(result, indent=2))  # noqa: T201
     except (ModbusError, OSError, TimeoutError) as err:
-        print(f"Could not read the battery: {err}")
+        print(f"Could not read the battery: {err}")  # noqa: T201
         return 1
+    else:
+        return 0
     finally:
         await connection.close()
 

@@ -2,6 +2,7 @@
 
 from asyncio import Lock, timeout
 from collections.abc import Iterable
+from typing import override
 
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Device, Raw, UpdateReport
@@ -17,20 +18,23 @@ class MyGridDevice(Device):
     """Caller-owned transport, typed fields, one block per poll, no write retry."""
 
     def __init__(self, unit: ModbusUnit) -> None:
+        """Wrap a caller-owned unit; the device never opens or closes the connection."""
         super().__init__(unit)
         self.battery = Battery(unit)
         self._lock = Lock()
         self._snapshot: BatteryData | None = None
 
+    @override
     async def _async_setup(self) -> None:
-        """The device states its timing needs; the connection owner resolves them."""
+        """State the device's timing needs; the connection owner resolves them."""
         self.modbus_unit.require_timeout(3)
 
     @property
     def snapshot(self) -> BatteryData:
         """The last fully validated snapshot; inspect the poll report for freshness."""
         if self._snapshot is None:
-            raise MyGridError("No valid battery snapshot yet")
+            msg = "No valid battery snapshot yet"
+            raise MyGridError(msg)
         return self._snapshot
 
     async def _update(self) -> UpdateReport:
@@ -51,7 +55,7 @@ class MyGridDevice(Device):
         return self.snapshot
 
     async def async_read(self) -> BatteryData:
-        """Convenience snapshot read; never write or close the connection."""
+        """Read a validated snapshot; never write or close the connection."""
         async with self._lock, timeout(12):
             return await self._read()
 
@@ -61,7 +65,8 @@ class MyGridDevice(Device):
         async with self._lock, timeout(12):
             current = await self._read()
             if not -current.max_discharge <= watts <= current.max_charge:
-                raise InvalidSetpointError("Power exceeds current battery limits")
+                msg = "Power exceeds current battery limits"
+                raise InvalidSetpointError(msg)
             await self.battery.write("power_setpoint", watts)
             return await self._read()
 
@@ -70,6 +75,7 @@ class MyGridDevice(Device):
         async with self._lock, timeout(12):
             await self.battery.write("restart", 1)
 
+    @override
     async def async_read_raw(self, names: Iterable[str] = COMPONENTS) -> Raw:
         """Fresh replayable raw words, without changing the validated snapshot."""
         async with self._lock, timeout(12):

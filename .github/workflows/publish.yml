@@ -1,7 +1,8 @@
 name: Publish library
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
@@ -11,7 +12,7 @@ on:
 permissions:
   contents: read
 env:
-  RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,11 +20,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0  # hatch-vcs derives the release version from git history and tags
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
       - run: uv sync --frozen
-      - name: Check tag matches the reviewed package version
-        run: uv run python -c "import os,tomllib; from pathlib import Path; assert os.environ['RELEASE_TAG'].removeprefix('v') == tomllib.loads(Path('pyproject.toml').read_text())['project']['version']"
       - run: uv run pytest
       - run: uv build
       - run: uv run twine check dist/*

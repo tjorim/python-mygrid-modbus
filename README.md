@@ -99,8 +99,8 @@ There is no TLS/authentication, serial transport, firmware-update API, hardware 
 uv sync --frozen
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy
-uv run pytest
+uv run ty check .
+uv run pytest --cov=mygrid_modbus
 uv build
 uv run twine check dist/*
 uv run python scripts/check_artifacts.py
@@ -108,4 +108,14 @@ uv run python scripts/check_artifacts.py
 
 Tests use the supplied `mock_modbus_unit`/`mock_modbus_connection` pytest fixtures for models, failures and replayed dumps. Independent raw-frame TCP tests exercise both real backends, clamping, lost acknowledgments and connection sharing. CI covers Python 3.12–3.14 and built-wheel installation, including base imports without backend extras.
 
-[Release instructions](docs/releasing.md) describe version checks, trusted publishing and the required `pypi` environment. Publishing is not performed by local validation. The MIT license covers original code; the manufacturer manual is included unmodified as [docs/mygrid-modbus-tcp-manual-en.md](docs/mygrid-modbus-tcp-manual-en.md) and remains MyGrid's. Physical hardware validation remains pending.
+### Live smoke tests
+
+With a ModuleTwo that has Modbus TCP enabled, check that it still speaks register map 2:
+
+```sh
+MYGRID_HOST=192.168.0.15 uv run pytest -m live
+```
+
+They are read-only (no setpoint or restart is ever sent), skipped without `MYGRID_HOST`, and excluded from ordinary runs. A failure is classified as `DEVICE UNAVAILABLE` (cannot connect or no answer), `DEVICE INCOMPATIBLE` (unusable data) or `DEVICE USES AN UNSUPPORTED REGISTER MAP`. These tests have never passed yet: the ModuleTwo used for development refuses connections on port 502.
+
+[Release instructions](docs/releasing.md) describe tag-based versions, trusted publishing and the required `pypi` environment. Publishing is not performed by local validation. The MIT license covers original code; the manufacturer manual is included unmodified as [docs/mygrid-modbus-tcp-manual-en.md](docs/mygrid-modbus-tcp-manual-en.md) and remains MyGrid's. Physical hardware validation remains pending.

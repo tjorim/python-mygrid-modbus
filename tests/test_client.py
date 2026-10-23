@@ -4,17 +4,11 @@ import asyncio
 import json
 from unittest.mock import patch
 
-import pytest
 from modbus_connection import ModbusConnectionError, ModbusTimeoutError
 from modbus_connection.model import Component, Device
+import pytest
 
-from mygrid_modbus import (
-    FAULTS,
-    InvalidSetpointError,
-    MyGridDevice,
-    MyGridError,
-    UnsupportedMapError,
-)
+from mygrid_modbus import FAULTS, InvalidSetpointError, MyGridDevice, MyGridError, UnsupportedMapError
 
 
 @pytest.fixture
@@ -27,16 +21,15 @@ async def test_component_and_single_block(device, mock_modbus_unit):
     assert isinstance(device, Device)
     assert isinstance(device.battery, Component)
     report = await device.async_update()
-    assert report.updated == {"battery"} and report.failed == {}
+    assert report.updated == {"battery"}
+    assert report.failed == {}
     data = device.snapshot
     assert (data.state_of_charge, data.setpoint, data.power) == (82, -800, -800)
     assert (data.max_charge, data.max_discharge) == (1200, 1000)
     assert (data.lifetime_charged, data.lifetime_discharged) == (131079, 196617)
     assert (data.stored_energy, data.total_capacity) == (3000, 5000)
     assert data.active_faults == []
-    assert [
-        (e.address, e.count, e.register_type) for e in mock_modbus_unit.read_events
-    ] == [(0, 18, "holding")]
+    assert [(e.address, e.count, e.register_type) for e in mock_modbus_unit.read_events] == [(0, 18, "holding")]
     assert mock_modbus_unit.required_timeout == 3
 
 
@@ -64,23 +57,16 @@ async def test_unknown_bit_preserved(device, mock_modbus_unit):
 async def test_stale(device, mock_modbus_unit):
     mock_modbus_unit.holding.update({6: 2, 1: 65535, 7: 65535, 8: 65535})
     data = await device.async_read()
-    assert (
-        data.state_of_charge
-        is data.power
-        is data.fault_flags
-        is data.active_faults
-        is None
-    )
-    assert data.stored_energy == 3000 and data.max_charge == 1200
+    assert data.state_of_charge is data.power is data.fault_flags is data.active_faults is None
+    assert data.stored_energy == 3000
+    assert data.max_charge == 1200
 
 
 @pytest.mark.parametrize(
     ("address", "value", "error"),
     [(0, 1, UnsupportedMapError), (1, 101, MyGridError), (6, 3, MyGridError)],
 )
-async def test_failed_map_report_preserves_good_snapshot(
-    device, mock_modbus_unit, address, value, error
-):
+async def test_failed_map_report_preserves_good_snapshot(device, mock_modbus_unit, address, value, error):
     previous = await device.async_read()
     mock_modbus_unit.holding[address] = value
     report = await device.async_update()
@@ -91,15 +77,14 @@ async def test_failed_map_report_preserves_good_snapshot(
         await device.async_read()
 
 
-@pytest.mark.parametrize(
-    "watts", [float("nan"), float("inf"), 1, 150, -3276900, 3276800]
-)
+@pytest.mark.parametrize("watts", [float("nan"), float("inf"), 1, 150, -3276900, 3276800])
 async def test_invalid_setpoint_no_io(device, mock_modbus_unit, watts):
     writes = []
     mock_modbus_unit.on_write(writes.append)
     with pytest.raises(InvalidSetpointError):
         await device.async_set_power(watts)
-    assert writes == [] and mock_modbus_unit.read_events == []
+    assert writes == []
+    assert mock_modbus_unit.read_events == []
 
 
 async def test_fresh_limits(device, mock_modbus_unit):
@@ -117,7 +102,8 @@ async def test_write_and_readback(device, mock_modbus_unit, watts):
     mock_modbus_unit.on_write(writes.append)
     data = await device.async_set_power(watts)
     assert data.setpoint == watts
-    assert len(writes) == 1 and writes[0].address == 2
+    assert len(writes) == 1
+    assert writes[0].address == 2
     assert len(mock_modbus_unit.read_events) == 2
 
 
@@ -157,8 +143,9 @@ async def test_restart_and_readonly(device, mock_modbus_unit):
     writes = []
     mock_modbus_unit.on_write(writes.append)
     await device.async_restart()
-    assert len(writes) == 1 and writes[0].address == 9
-    with pytest.raises(ValueError):
+    assert len(writes) == 1
+    assert writes[0].address == 9
+    with pytest.raises(ValueError, match=r"."):
         await device.battery.write("restart", 2)
     with pytest.raises(AttributeError):
         await device.battery.write("state_of_charge", 10)
@@ -168,7 +155,8 @@ async def test_restart_and_readonly(device, mock_modbus_unit):
 async def test_raw_dump_replays(device, mock_modbus_unit, mock_modbus_connection):
     snapshot = await device.async_read()
     raw = await device.async_read_raw()
-    assert raw["holding"][5] == 64736 and raw["holding"][13] == 2
+    assert raw["holding"][5] == 64736
+    assert raw["holding"][13] == 2
     other = mock_modbus_connection.for_unit(2)
     other.load_raw(json.loads(json.dumps(raw)))
     assert await MyGridDevice(other).async_read() == snapshot

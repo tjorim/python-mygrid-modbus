@@ -1,8 +1,8 @@
 """Small independent Modbus TCP peer, based on the manual's wire contract."""
 
 import asyncio
-import struct
 from contextlib import suppress
+import struct
 
 
 class BatterySimulator:
@@ -74,9 +74,7 @@ class BatterySimulator:
                         response = bytes([131, 2])
                     else:
                         words = self.registers[address : address + value]
-                        response = struct.pack(">BB", 3, len(words) * 2) + struct.pack(
-                            f">{len(words)}H", *words
-                        )
+                        response = struct.pack(">BB", 3, len(words) * 2) + struct.pack(f">{len(words)}H", *words)
                 elif function == 6:
                     if address not in (2, 9):
                         response = bytes([134, 2])
@@ -86,11 +84,7 @@ class BatterySimulator:
                         self.writes.append((address, value))
                         if address == 2:
                             signed = struct.unpack(">h", struct.pack(">H", value))[0]
-                            limit = (
-                                self.clamp_charge_to
-                                if self.clamp_charge_to is not None
-                                else self.registers[3]
-                            )
+                            limit = self.clamp_charge_to if self.clamp_charge_to is not None else self.registers[3]
                             accepted = max(-self.registers[4], min(signed, limit))
                             self.registers[2] = accepted & 65535
                         if self.drop_write_response:
@@ -98,10 +92,7 @@ class BatterySimulator:
                         response = body
                 else:
                     response = bytes([function | 128, 1])
-                writer.write(
-                    struct.pack(">HHHB", transaction, 0, len(response) + 1, unit)
-                    + response
-                )
+                writer.write(struct.pack(">HHHB", transaction, 0, len(response) + 1, unit) + response)
                 await writer.drain()
         except (asyncio.IncompleteReadError, ConnectionError):
             pass

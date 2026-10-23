@@ -2,8 +2,8 @@
 
 import asyncio
 
-import pytest
 from modbus_connection import ModbusError, ModbusTcpParams
+import pytest
 
 from mygrid_modbus import InvalidSetpointError, MyGridDevice
 from tests.simulator import BatterySimulator
@@ -23,9 +23,7 @@ def connection_factory(request):
 
 async def test_wire_read_write_restart(registers, connection_factory):
     async with BatterySimulator(registers) as battery:
-        connection = connection_factory(
-            ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
-        )
+        connection = connection_factory(ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3)
         client = MyGridDevice(connection.for_unit(1))
         try:
             data = await client.async_read()
@@ -45,9 +43,7 @@ async def test_wire_read_write_restart(registers, connection_factory):
 
 async def test_wire_clamp(registers, connection_factory):
     async with BatterySimulator(registers) as battery:
-        connection = connection_factory(
-            ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
-        )
+        connection = connection_factory(ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3)
         client = MyGridDevice(connection.for_unit(1))
         try:
             battery.clamp_charge_to = 5
@@ -59,9 +55,7 @@ async def test_wire_clamp(registers, connection_factory):
 
 async def test_wire_exception_recovery(registers, connection_factory):
     async with BatterySimulator(registers) as battery:
-        connection = connection_factory(
-            ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
-        )
+        connection = connection_factory(ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3)
         client = MyGridDevice(connection.for_unit(1))
         try:
             battery.next_exception = 2
@@ -76,9 +70,7 @@ async def test_wire_exception_recovery(registers, connection_factory):
 
 async def test_lost_ack_never_replayed(registers, connection_factory):
     async with BatterySimulator(registers) as battery:
-        connection = connection_factory(
-            ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
-        )
+        connection = connection_factory(ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3)
         client = MyGridDevice(connection.for_unit(1))
         try:
             battery.drop_write_response = True
@@ -93,9 +85,7 @@ async def test_lost_ack_never_replayed(registers, connection_factory):
 
 async def test_shared_unit_concurrency_and_validation(registers, connection_factory):
     async with BatterySimulator(registers) as battery:
-        connection = connection_factory(
-            ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
-        )
+        connection = connection_factory(ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3)
         client = MyGridDevice(connection.for_unit(1))
         peer = connection.for_unit(1)
         try:
