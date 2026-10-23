@@ -7,6 +7,8 @@ updates:
       day: "friday"
       time: "18:00"
       timezone: "Etc/UTC"
+    cooldown:
+      default-days: 3
     assignees:
       - "tjorim"
     commit-message:
@@ -37,6 +39,8 @@ updates:
       day: "friday"
       time: "18:00"
       timezone: "Etc/UTC"
+    cooldown:
+      default-days: 3
     assignees:
       - "tjorim"
     commit-message:
