@@ -2,7 +2,7 @@
 
 A standalone async Python device library for **MyGrid ModuleTwo** batteries, implementing manufacturer register map **version 2**. Requires Python **3.12+**.
 
-The library uses `modbus-connection` component models. Applications supply a `ModbusUnit`, choose the transport backend, and own the connection lifetime. No application framework is required. Version 0.1.0 is prepared locally and has not yet been published to PyPI; repository URLs describe the intended publication locations.
+The library uses `modbus-connection` component models. Applications supply a `ModbusUnit`, choose the transport backend, and own the connection lifetime. No application framework is required. The source is published on GitHub. Version 0.1.0 has not yet been published to PyPI.
 
 ## Installation
 
