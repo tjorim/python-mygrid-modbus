@@ -3,9 +3,9 @@
 import asyncio
 
 import pytest
-from modbus_connection import ModbusTcpParams
+from modbus_connection import ModbusError, ModbusTcpParams
 
-from mygrid_modbus import InvalidSetpointError, MyGridClient, MyGridError
+from mygrid_modbus import InvalidSetpointError, MyGridDevice
 from tests.simulator import BatterySimulator
 
 pytestmark = pytest.mark.simulator
@@ -26,7 +26,7 @@ async def test_wire_read_write_restart(registers, connection_factory):
         connection = connection_factory(
             ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
         )
-        client = MyGridClient(connection.for_unit(1))
+        client = MyGridDevice(connection.for_unit(1))
         try:
             data = await client.async_read()
             assert data.state_of_charge == 82
@@ -48,7 +48,7 @@ async def test_wire_clamp(registers, connection_factory):
         connection = connection_factory(
             ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
         )
-        client = MyGridClient(connection.for_unit(1))
+        client = MyGridDevice(connection.for_unit(1))
         try:
             battery.clamp_charge_to = 5
             assert (await client.async_set_power(1000)).setpoint == 500
@@ -62,10 +62,10 @@ async def test_wire_exception_recovery(registers, connection_factory):
         connection = connection_factory(
             ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
         )
-        client = MyGridClient(connection.for_unit(1))
+        client = MyGridDevice(connection.for_unit(1))
         try:
             battery.next_exception = 2
-            with pytest.raises(MyGridError):
+            with pytest.raises(ModbusError):
                 await client.async_read()
             assert (await client.async_read()).state_of_charge == 82
             assert battery.writes == []
@@ -79,10 +79,10 @@ async def test_lost_ack_never_replayed(registers, connection_factory):
         connection = connection_factory(
             ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
         )
-        client = MyGridClient(connection.for_unit(1))
+        client = MyGridDevice(connection.for_unit(1))
         try:
             battery.drop_write_response = True
-            with pytest.raises(MyGridError):
+            with pytest.raises(ModbusError):
                 await client.async_set_power(500)
             assert battery.writes == [(2, 5)]
             assert (await client.async_read()).setpoint == 500
@@ -96,7 +96,7 @@ async def test_shared_unit_concurrency_and_validation(registers, connection_fact
         connection = connection_factory(
             ModbusTcpParams(host="127.0.0.1", port=battery.port), timeout=0.3
         )
-        client = MyGridClient(connection.for_unit(1))
+        client = MyGridDevice(connection.for_unit(1))
         peer = connection.for_unit(1)
         try:
             await asyncio.gather(

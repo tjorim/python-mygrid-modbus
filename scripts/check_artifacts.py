@@ -21,7 +21,8 @@ def main() -> None:
         names = wheel.namelist()
         assert "mygrid_modbus/py.typed" in names
         assert "mygrid_modbus/__init__.py" in names
-        assert "mygrid_modbus/client.py" in names
+        assert "mygrid_modbus/device.py" in names
+        assert "mygrid_modbus/battery.py" in names
         assert all(
             name.startswith(("mygrid_modbus/", f"mygrid_modbus-{version}.dist-info/"))
             for name in names

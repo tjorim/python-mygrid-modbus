@@ -1,31 +1,20 @@
-"""Public API for the asynchronous MyGrid ModuleTwo Modbus TCP library."""
+"""Typed component models and async device API for MyGrid ModuleTwo."""
 
-from .client import (
-    FAULTS,
-    MAP_VERSION,
-    REGISTER_COUNT,
-    UNIT_ID,
-    BatteryData,
-    InvalidSetpointError,
-    MyGridClient,
-    MyGridError,
-    UnsupportedMapError,
-    decode_registers,
-    signed16,
-    unsigned32,
-)
+from .battery import Battery
+from .const import FAULTS, MAP_VERSION, REGISTER_COUNT, UNIT_ID
+from .data import BatteryData
+from .device import MyGridDevice
+from .exceptions import InvalidSetpointError, MyGridError, UnsupportedMapError
 
 __all__ = [
     "FAULTS",
     "MAP_VERSION",
     "REGISTER_COUNT",
     "UNIT_ID",
+    "Battery",
     "BatteryData",
     "InvalidSetpointError",
-    "MyGridClient",
+    "MyGridDevice",
     "MyGridError",
     "UnsupportedMapError",
-    "decode_registers",
-    "signed16",
-    "unsigned32",
 ]
