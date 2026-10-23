@@ -9,13 +9,13 @@ Requires **Python 3.12+**. This is an independent package and repository, consum
 From this checkout before publication:
 
 ```sh
-python -m pip install .
+python -m pip install ".[tmodbus]"
 ```
 
 After publishing version 0.1.0 to PyPI:
 
 ```sh
-python -m pip install mygrid-modbus==0.1.0
+python -m pip install "mygrid-modbus[tmodbus]==0.1.0"
 ```
 
 ## Use
@@ -23,11 +23,17 @@ python -m pip install mygrid-modbus==0.1.0
 ```python
 import asyncio
 
+from modbus_connection import ModbusTcpParams
+from modbus_connection.tmodbus import ModbusConnection
 from mygrid_modbus import MyGridClient
 
 
 async def main() -> None:
-    client = MyGridClient("192.168.1.20", port=502)
+    # The application owns the connection and chooses the transport backend.
+    connection = ModbusConnection(
+        ModbusTcpParams(host="192.168.1.20", port=502), timeout=3
+    )
+    client = MyGridClient(connection.for_unit(1))
     try:
         snapshot = await client.async_read()
         print(snapshot.state_of_charge, snapshot.power)
@@ -39,13 +45,17 @@ async def main() -> None:
         # await client.async_set_power(0)
         # await client.async_restart()  # explicit reboot; never retried
     finally:
-        await client.async_close()
+        await connection.close()
 
 
 asyncio.run(main())
 ```
 
-Create the client inside an active event loop. Keep one client per battery or cluster leader and always close it. Closing a client does not idle the battery.
+Create the connection and client inside an active event loop. Bind unit ID **1** and keep one connection per battery or cluster leader. Close that connection when its last consumer is finished; closing does not idle the battery.
+
+The base package is backend-neutral: `pip install mygrid-modbus` is sufficient when an application supplies a `ModbusUnit`. For standalone use choose `[tmodbus]` as above, or install `[pymodbus]` and import `ModbusConnection` from `modbus_connection.pymodbus`. Both satisfy the same unit interface. Inside Home Assistant, borrow a managed unit with `homeassistant.components.modbus.async_get_unit`; Home Assistant owns and releases that connection. Config flows use `async_get_temporary_unit`.
+
+This pre-release API replaces the earlier local host/port constructor with `MyGridClient(unit)` and removes `client.async_close()`. Connection owners now perform cleanup; the battery snapshot and command methods are unchanged.
 
 ## Public API
 
@@ -53,11 +63,10 @@ Import from `mygrid_modbus`; implementation submodules are not the public API.
 
 | API | Contract |
 | --- | --- |
-| `MyGridClient(host, port=502)` | One async TCP connection, serialized operations, fixed documented unit ID 1 |
+| `MyGridClient(unit: ModbusUnit)` | Inject a caller-owned unit bound to ID 1; serialize battery operations without owning the connection |
 | `await client.async_read()` | One full-map read; returns `BatteryData`; never writes |
 | `await client.async_set_power(watts)` | Fresh limits, one validated write, readback; returns confirmed `BatteryData` |
 | `await client.async_restart()` | Write register 9 with value 1 once; returns `None` |
-| `await client.async_close()` | Wait for active operations and close the socket; does not change the setpoint |
 | `BatteryData` | Frozen typed snapshot: SOC, setpoint, limits, measured power, status, flags, energy counters, capacity and map version |
 | `MyGridError` | Communication, rejected requests, malformed map, or uncertain write confirmation |
 | `UnsupportedMapError` | Subclass of `MyGridError` for maps other than version 2 |
@@ -69,9 +78,11 @@ Import from `mygrid_modbus`; implementation submodules are not the public API.
 
 All power values in `BatteryData` are **watts**; all energy values are **Wh**. Positive power charges; negative discharges. Status is `0` normal, `1` fault, `2` telemetry stale. Status 2 makes SOC, measured power and fault flags `None`; `active_faults` is also `None`. Other documented registers remain available. Faults preserve unknown raw bits; `active_faults` lists names for known bits only. The library has no caches, polling schedules, stored desired setpoints or Home Assistant entities.
 
-Operations use a 3-second request timeout and a 12-second total IO budget once their lock is acquired. Reads and complete command sequences share the lock. Request retries and background reconnection are disabled. A later operation may establish a new connection, but no old command is retained or replayed. Cancellation closes the connection. A command that raises `MyGridError` may have been applied with a lost acknowledgment; inspect readings before manually repeating it. `InvalidSetpointError` and `UnsupportedMapError` reject a power command before a write. A returned setpoint confirms acceptance, not measured delivery; firmware applies power about once a second.
+Operations have a 12-second IO budget after acquiring this client's lock, including time queued on the shared transport. The connection owner selects per-request timeouts (3 seconds in the standalone example and the integration's requested timeout). Other consumers may require a longer shared timeout. Reads and complete command sequences are serialized within this battery client; `modbus-connection` serializes individual requests across all consumers of the physical connection. Use one power controller: sharing a socket does not coordinate competing control strategies.
 
-The package depends on `pymodbus>=3.13.1,<4`. Home Assistant may pin a compatible exact version itself. `py.typed` is included in wheels and source distributions for downstream strict typing.
+The library never connects, closes or disconnects a supplied unit, including on cancellation, invalid data or an uncertain write. Connection lifecycle and transport recovery belong to the owner/backend. Both supported `modbus-connection` backends disable request retransmission; the MyGrid library performs no command retry and retains no desired setpoint. A later read may reconnect through the owner-managed backend, but no previous write is replayed. Custom `ModbusUnit` implementations must provide equivalent no-write-retry semantics. A command that raises `MyGridError` may have been applied with a lost acknowledgment; inspect readings before manually repeating it. `InvalidSetpointError` and `UnsupportedMapError` reject a power command before a write. A returned setpoint confirms acceptance, not measured delivery; firmware applies power about once a second.
+
+The base dependency is **`modbus-connection>=4.12.4,<5`**, with optional `tmodbus` and `pymodbus` backend extras. Core library imports require neither backend nor Home Assistant. `py.typed` is included in wheels and source distributions for downstream strict typing.
 
 ## Device prerequisites and limits
 
@@ -92,6 +103,6 @@ uv run twine check dist/*
 uv run python scripts/check_artifacts.py
 ```
 
-The tests run with only this library's dependencies. They cover register decoding, faults, stale snapshots, limits, cancellation, signed commands and a raw-frame TCP battery simulator. They neither import Home Assistant nor contact real hardware. CI tests Python 3.12, 3.13 and 3.14, builds the wheel/sdist, and runs the suite against the built wheel in a clean environment.
+The tests run with only this library's dependencies. They cover register decoding, faults, stale snapshots, limits, cancellation, signed commands and a raw-frame TCP battery simulator exercised against both transport backends. They neither import Home Assistant nor contact real hardware. CI tests Python 3.12, 3.13 and 3.14, builds the wheel/sdist, and runs the suite against the built wheel in a clean environment.
 
 See [release instructions](docs/releasing.md). The original code is MIT licensed; the manufacturer manual is referenced, not republished.

@@ -12,6 +12,7 @@ class BatterySimulator:
         self.registers = list(registers)
         self.requests: list[tuple[int, int, int]] = []
         self.writes: list[tuple[int, int]] = []
+        self.total_connections = 0
         self.connections = 0
         self.maximum_connections = 0
         self.rejects = 0
@@ -43,6 +44,7 @@ class BatterySimulator:
         task.add_done_callback(self.tasks.discard)
 
     async def _serve(self, reader, writer):
+        self.total_connections += 1
         self.writers.add(writer)
         if self.connections:
             self.rejects += 1

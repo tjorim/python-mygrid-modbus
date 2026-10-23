@@ -1,14 +1,16 @@
 """Protocol decoding, signed commands, failure modes and serialization."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from pymodbus.exceptions import ModbusException
-from pymodbus.pdu import ExceptionResponse
-from pymodbus.pdu.register_message import (
-    ReadHoldingRegistersResponse,
-    WriteSingleRegisterResponse,
+from modbus_connection import (
+    IllegalDataAddressError,
+    ModbusConnectionError,
+    ModbusError,
+    ModbusProtocolError,
+    ModbusTimeoutError,
+    ModbusUnit,
 )
 
 from mygrid_modbus import (
@@ -93,185 +95,145 @@ def test_invalid_length(size):
 
 
 @pytest.fixture
-def transport(registers):
-    transport = MagicMock()
-    transport.connected = True
-    transport.connect = AsyncMock(return_value=True)
-    transport.read_holding_registers = AsyncMock(
-        return_value=ReadHoldingRegistersResponse(registers=registers)
-    )
-    transport.write_register = AsyncMock(
-        return_value=WriteSingleRegisterResponse(address=2, registers=[65528])
-    )
-    with patch(
-        "mygrid_modbus.client.AsyncModbusTcpClient", return_value=transport
-    ) as factory:
-        transport.factory = factory
-        yield transport
+def unit(registers):
+    """Mock the public backend-neutral unit boundary, not a socket client."""
+    unit = MagicMock(spec=ModbusUnit)
+    unit.read_holding_registers.return_value = registers
+    return unit
 
 
-async def test_read(transport):
-    client = MyGridClient("battery")
+async def test_read(unit):
+    client = MyGridClient(unit)
     assert (await client.async_read()).state_of_charge == 82
-    transport.read_holding_registers.assert_awaited_once_with(
-        address=0, count=18, device_id=1
-    )
-    transport.factory.assert_called_once_with(
-        "battery", port=502, timeout=3, retries=0, reconnect_delay=0
-    )
-    transport.write_register.assert_not_called()
-    await client.async_close()
-    transport.close.assert_called_once()
-
-
-async def test_connect(transport):
-    transport.connected = False
-    client = MyGridClient("battery")
-    await client.async_read()
-    transport.connect.assert_awaited_once()
-    transport.connect.return_value = False
-    with pytest.raises(MyGridError, match="Cannot connect"):
-        await client.async_read()
+    unit.read_holding_registers.assert_awaited_once_with(0, 18)
+    unit.write_register.assert_not_called()
+    unit.disconnect.assert_not_called()
 
 
 @pytest.mark.parametrize(
-    "error", [ModbusException("bad"), OSError("bad"), TimeoutError()]
+    "error",
+    [
+        ModbusConnectionError("bad"),
+        ModbusError("bad"),
+        ModbusTimeoutError("bad"),
+        ModbusProtocolError("bad"),
+        IllegalDataAddressError(),
+        OSError("bad"),
+        TimeoutError(),
+    ],
 )
-async def test_transport_failure(transport, error):
-    transport.read_holding_registers.side_effect = error
-    client = MyGridClient("battery")
+async def test_transport_failure_keeps_owner_connection(unit, error):
+    unit.read_holding_registers.side_effect = error
     with pytest.raises(MyGridError):
-        await client.async_read()
-    transport.close.assert_called_once()
-
-
-async def test_modbus_exception(transport):
-    transport.read_holding_registers.return_value = ExceptionResponse(3, 2)
-    with pytest.raises(MyGridError, match="rejected"):
-        await MyGridClient("battery").async_read()
+        await MyGridClient(unit).async_read()
+    unit.disconnect.assert_not_called()
 
 
 @pytest.mark.parametrize(
     "watts", [float("nan"), float("inf"), 1, 150, -3276900, 3276800]
 )
-async def test_invalid_setpoint(transport, watts):
+async def test_invalid_setpoint(unit, watts):
     with pytest.raises(InvalidSetpointError):
-        await MyGridClient("battery").async_set_power(watts)
-    transport.write_register.assert_not_called()
-    transport.read_holding_registers.assert_not_called()
+        await MyGridClient(unit).async_set_power(watts)
+    unit.write_register.assert_not_called()
+    unit.read_holding_registers.assert_not_called()
+    unit.disconnect.assert_not_called()
 
 
-async def test_fresh_limits(transport):
+async def test_fresh_limits(unit):
     with pytest.raises(InvalidSetpointError):
-        await MyGridClient("battery").async_set_power(1300)
-    transport.read_holding_registers.assert_awaited_once()
-    transport.write_register.assert_not_called()
+        await MyGridClient(unit).async_set_power(1300)
+    unit.read_holding_registers.assert_awaited_once()
+    unit.write_register.assert_not_called()
+    unit.disconnect.assert_not_called()
 
 
 @pytest.mark.parametrize("watts", [-1000, -800, 0, 1200])
-async def test_write_and_readback(transport, registers, watts):
-    transport.write_register.return_value = WriteSingleRegisterResponse(
-        address=2, registers=[int(watts / 100) & 65535]
-    )
-    client = MyGridClient("battery")
-    # The readback is deliberately different: confirmed state, not optimism.
-    assert (await client.async_set_power(watts)).setpoint == -800
-    transport.write_register.assert_awaited_once_with(
-        address=2, value=int(watts / 100) & 65535, device_id=1
-    )
-    assert transport.read_holding_registers.await_count == 2
+async def test_write_and_readback(unit, watts):
+    # Readback deliberately differs from the request; never publish optimism.
+    assert (await MyGridClient(unit).async_set_power(watts)).setpoint == -800
+    unit.write_register.assert_awaited_once_with(2, int(watts / 100) & 65535)
+    assert unit.read_holding_registers.await_count == 2
 
 
-@pytest.mark.parametrize(
-    "response",
-    [
-        ExceptionResponse(6, 2),
-        WriteSingleRegisterResponse(address=3, registers=[65528]),
-        WriteSingleRegisterResponse(address=2, registers=[123]),
-    ],
-)
-async def test_rejected_write(transport, response):
-    transport.write_register.return_value = response
+async def test_rejected_write(unit):
+    unit.write_register.side_effect = IllegalDataAddressError()
     with pytest.raises(MyGridError):
-        await MyGridClient("battery").async_set_power(-800)
-    assert transport.write_register.await_count == 1
-    assert transport.read_holding_registers.await_count == 1
+        await MyGridClient(unit).async_set_power(-800)
+    assert unit.write_register.await_count == 1
+    assert unit.read_holding_registers.await_count == 1
+    unit.disconnect.assert_not_called()
 
 
-async def test_readback_failure_not_retried(transport):
-    transport.read_holding_registers.side_effect = [
-        transport.read_holding_registers.return_value,
-        OSError(),
-    ]
-    client = MyGridClient("battery")
+async def test_readback_failure_not_retried(unit, registers):
+    unit.read_holding_registers.side_effect = [registers, ModbusTimeoutError()]
+    client = MyGridClient(unit)
     with pytest.raises(MyGridError):
         await client.async_set_power(-800)
-    assert transport.write_register.await_count == 1
-    transport.read_holding_registers.side_effect = None
+    assert unit.write_register.await_count == 1
+    unit.read_holding_registers.side_effect = None
     await client.async_read()
-    assert transport.write_register.await_count == 1
+    assert unit.write_register.await_count == 1
+    unit.disconnect.assert_not_called()
 
 
-async def test_restart(transport):
-    transport.write_register.return_value = WriteSingleRegisterResponse(
-        address=9, registers=[1]
-    )
-    await MyGridClient("battery").async_restart()
-    transport.write_register.assert_awaited_once_with(address=9, value=1, device_id=1)
-    transport.read_holding_registers.assert_not_called()
+async def test_restart(unit):
+    await MyGridClient(unit).async_restart()
+    unit.write_register.assert_awaited_once_with(9, 1)
+    unit.read_holding_registers.assert_not_called()
+    unit.disconnect.assert_not_called()
 
 
-async def test_serialization(transport):
+async def test_serialization(unit, registers):
     entered = asyncio.Event()
     release = asyncio.Event()
-    response = transport.read_holding_registers.return_value
 
-    async def delayed(**kwargs):
+    async def delayed(*args):
         entered.set()
         await release.wait()
-        return response
+        return registers
 
-    transport.read_holding_registers.side_effect = delayed
-    client = MyGridClient("battery")
+    unit.read_holding_registers.side_effect = delayed
+    client = MyGridClient(unit)
     first = asyncio.create_task(client.async_read())
     await entered.wait()
     second = asyncio.create_task(client.async_set_power(-800))
-    close = asyncio.create_task(client.async_close())
     await asyncio.sleep(0)
-    assert transport.read_holding_registers.await_count == 1
-    transport.write_register.assert_not_called()
+    assert unit.read_holding_registers.await_count == 1
+    unit.write_register.assert_not_called()
     release.set()
-    await asyncio.gather(first, second, close)
-    assert transport.read_holding_registers.await_count == 3
-    assert transport.write_register.await_count == 1
+    await asyncio.gather(first, second)
+    assert unit.read_holding_registers.await_count == 3
+    assert unit.write_register.await_count == 1
 
 
-async def test_cancelled_operation_closes_connection(transport):
+async def test_cancellation_preserves_owner_connection(unit, registers):
     entered = asyncio.Event()
 
-    async def hanging(**kwargs):
+    async def hanging(*args):
         entered.set()
         await asyncio.Event().wait()
 
-    transport.read_holding_registers.side_effect = hanging
-    client = MyGridClient("battery")
+    unit.read_holding_registers.side_effect = hanging
+    client = MyGridClient(unit)
     task = asyncio.create_task(client.async_read())
     await entered.wait()
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-    transport.close.assert_called_once()
-    transport.write_register.assert_not_called()
+    unit.disconnect.assert_not_called()
+    unit.write_register.assert_not_called()
+    unit.read_holding_registers.side_effect = None
+    assert (await client.async_read()).state_of_charge == 82
 
 
-async def test_operation_timeout_closes_connection(transport):
-    async def hanging(**kwargs):
+async def test_operation_timeout_preserves_owner_connection(unit):
+    async def hanging(*args):
         await asyncio.Event().wait()
 
-    transport.read_holding_registers.side_effect = hanging
-    client = MyGridClient("battery")
+    unit.read_holding_registers.side_effect = hanging
     with patch("mygrid_modbus.client.timeout", return_value=asyncio.timeout(0.01)):
         with pytest.raises(MyGridError):
-            await client.async_read()
-    transport.close.assert_called_once()
-    transport.write_register.assert_not_called()
+            await MyGridClient(unit).async_read()
+    unit.disconnect.assert_not_called()
+    unit.write_register.assert_not_called()

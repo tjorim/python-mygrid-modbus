@@ -24,10 +24,15 @@ jobs:
       - run: uv build --python '${{ matrix.python }}'
       - run: uv run --python '${{ matrix.python }}' twine check dist/*
       - run: uv run --python '${{ matrix.python }}' python scripts/check_artifacts.py
+      - name: Import base wheel without transport backends
+        run: |
+          uv venv --python '${{ matrix.python }}' /tmp/mygrid-base-test
+          uv pip install --python /tmp/mygrid-base-test/bin/python dist/*.whl
+          /tmp/mygrid-base-test/bin/python -I -c "import importlib.util; import mygrid_modbus; assert all(importlib.util.find_spec(name) is None for name in ['homeassistant', 'tmodbus', 'pymodbus'])"
       - name: Test installed wheel without Home Assistant
         run: |
           uv venv --python '${{ matrix.python }}' /tmp/mygrid-wheel-test
-          uv pip install --python /tmp/mygrid-wheel-test/bin/python dist/*.whl pytest==9.0.3 pytest-asyncio==1.4.0 pytest-cov==7.1.0
+          uv pip install --python /tmp/mygrid-wheel-test/bin/python dist/*.whl 'modbus-connection[tmodbus,pymodbus]==4.12.4' tmodbus==0.6.2 pytest==9.0.3 pytest-asyncio==1.4.0 pytest-cov==7.1.0
           /tmp/mygrid-wheel-test/bin/python -I -c "import importlib.util; import mygrid_modbus; assert importlib.util.find_spec('homeassistant') is None"
           /tmp/mygrid-wheel-test/bin/python -m pytest
       - name: Test minimum supported pymodbus

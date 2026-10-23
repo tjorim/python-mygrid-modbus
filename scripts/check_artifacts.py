@@ -6,6 +6,8 @@ import zipfile
 from email.parser import BytesParser
 from pathlib import Path
 
+from packaging.requirements import Requirement
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -30,7 +32,20 @@ def main() -> None:
         assert metadata["Name"] == project["name"]
         assert metadata["Version"] == version
         assert metadata["Requires-Python"] == ">=3.12"
-        assert metadata.get_all("Requires-Dist") == ["pymodbus<4,>=3.13.1"]
+        requirements = [
+            Requirement(value) for value in metadata.get_all("Requires-Dist", [])
+        ]
+        assert {requirement.name for requirement in requirements} == {
+            "modbus-connection"
+        }
+        assert {str(requirement.specifier) for requirement in requirements} == {
+            "<5,>=4.12.4"
+        }
+        assert sum(requirement.marker is None for requirement in requirements) == 1
+        assert set(metadata.get_all("Provides-Extra", [])) == {"tmodbus", "pymodbus"}
+        assert {
+            extra for requirement in requirements for extra in requirement.extras
+        } == {"tmodbus", "pymodbus"}
     with tarfile.open(ROOT / "dist" / f"mygrid_modbus-{version}.tar.gz") as sdist:
         names = sdist.getnames()
         assert any(name.endswith("/src/mygrid_modbus/py.typed") for name in names)

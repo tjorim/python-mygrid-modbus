@@ -22,7 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
-dependencies = ["pymodbus>=3.13.1,<4"]
+dependencies = ["modbus-connection>=4.12.4,<5"]
+
+[project.optional-dependencies]
+tmodbus = ["modbus-connection[tmodbus]>=4.12.4,<5"]
+pymodbus = ["modbus-connection[pymodbus]>=4.12.4,<5"]
 
 [project.urls]
 Documentation = "https://github.com/tjorim/mygrid-modbus#readme"
@@ -31,6 +35,8 @@ Issues = "https://github.com/tjorim/mygrid-modbus/issues"
 
 [dependency-groups]
 dev = [
+    "modbus-connection[tmodbus,pymodbus]==4.12.4",
+    "tmodbus==0.6.2",
     "pytest==9.0.3",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",

@@ -10,3 +10,5 @@ This package is released independently of the Home Assistant integration. Its me
 6. Verify installation of `mygrid-modbus==0.1.0` in an empty environment from PyPI. Then update the integration manifest/project dependency to that version and test it before releasing the integration or submitting it to Home Assistant core.
 
 Home Assistant core must resolve the library from the package index; a sibling-path development source is not used at runtime. Keep the public API documented, typed and backward compatible within a compatible release; release breaking API changes explicitly and adapt integration tests.
+
+The base package accepts a caller-owned `ModbusUnit` and must remain backend-neutral. Validate base-only imports in a clean environment as well as standalone `[tmodbus]` / `[pymodbus]` use. The supported backends must not retry uncertain writes; rerun lost-acknowledgment tests when changing transport dependencies. Never add socket teardown to the battery client: the injected connection can have other consumers.
