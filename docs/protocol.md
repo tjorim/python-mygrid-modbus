@@ -1,6 +1,6 @@
 # Protocol reference
 
-Source: user-supplied **MyGrid ModuleTwo Modbus TCP user manual**, `mygrid-modbus-tcp-manual-en.md`, map version 2. This is an implementation summary, not a redistribution of the manual. When changing support, check changes against a versioned manufacturer manual and add fixtures/tests for the new map.
+Source: **MyGrid ModuleTwo Modbus TCP user manual**, map version 2, kept as [mygrid-modbus-tcp-manual-en.md](mygrid-modbus-tcp-manual-en.md) (published by MyGrid at <https://moduletwo.mygrid.energy/nl?capacity=4.22>). This page is an implementation summary; the manual is the reference. When changing support, check changes against a versioned manufacturer manual and add fixtures/tests for the new map.
 
 TCP port 502; unit 1; zero-based wire addresses. Read the entire map with function 03, address 0, count 18. Single-register writes use function 06. Only addresses 2 and 9 are writable. No address offset or 40001 notation is used in code.
 

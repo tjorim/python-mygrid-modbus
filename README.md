@@ -108,4 +108,4 @@ uv run python scripts/check_artifacts.py
 
 Tests use the supplied `mock_modbus_unit`/`mock_modbus_connection` pytest fixtures for models, failures and replayed dumps. Independent raw-frame TCP tests exercise both real backends, clamping, lost acknowledgments and connection sharing. CI covers Python 3.12–3.14 and built-wheel installation, including base imports without backend extras.
 
-[Release instructions](docs/releasing.md) describe version checks, trusted publishing and the required `pypi` environment. Publishing is not performed by local validation. The MIT license covers original code; the manufacturer manual is referenced, not republished. Physical hardware validation remains pending.
+[Release instructions](docs/releasing.md) describe version checks, trusted publishing and the required `pypi` environment. Publishing is not performed by local validation. The MIT license covers original code; the manufacturer manual is included unmodified as [docs/mygrid-modbus-tcp-manual-en.md](docs/mygrid-modbus-tcp-manual-en.md) and remains MyGrid's. Physical hardware validation remains pending.
