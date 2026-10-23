@@ -40,7 +40,7 @@ Issues = "https://github.com/tjorim/mygrid-modbus/issues"
 dev = [
     "modbus-connection[tmodbus,pymodbus]==4.12.4",
     "tmodbus==0.6.2",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
     "ruff==0.17.2",
