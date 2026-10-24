@@ -83,6 +83,8 @@ Use `async_set_power()` for live-limit validation. Component field metadata desc
 
 ## Device prerequisites
 
+> **Known issue: the port can stay closed after following MyGrid's guide.** MyGrid's Modbus manual (published on [moduletwo.mygrid.energy](https://moduletwo.mygrid.energy/nl); a copy is in [docs](docs/mygrid-modbus-tcp-manual-en.md)) says that setting the control source to Home Assistant in the MyGrid app opens Modbus TCP on port 502. On the unit used to develop this library (as of 2026-10-24) the control source was set that way and port 502 still refused connections. MyGrid support replied that Modbus should be allowed by default and that they would ask their IT team to enable it. If you hit the same thing, enabling the setting in the app is not enough: **contact MyGrid support** with your battery's hostname and MAC address and ask them to enable Modbus TCP. This is a device or backend matter that this library cannot work around.
+
 Enable external control in the manufacturer's app before connecting; otherwise the TCP port is closed. Use the same LAN and the **Auto leader** for a cluster. The battery accepts one TCP client at a time, so share a connection between local consumers. Choose one writer: sharing the socket does not arbitrate competing power strategies.
 
 There is no TLS/authentication, serial transport, firmware-update API, hardware identity, follower enumeration or documented disconnection watchdog in this map. Keep port 502 on the trusted LAN. Closing the connection does not request idle. Cluster SOC, limits and setpoints have documented aggregate meanings; energy aggregation is not established by the manual. See [protocol details](docs/protocol.md).
