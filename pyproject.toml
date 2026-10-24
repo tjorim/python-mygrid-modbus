@@ -32,7 +32,7 @@ tmodbus = ["modbus-connection[tmodbus]>=4.12.4,<5"]
 pymodbus = ["modbus-connection[pymodbus]>=4.12.4,<5"]
 
 [project.urls]
-Documentation = "https://github.com/tjorim/python-mygrid-modbus#readme"
+Documentation = "https://tjorim.github.io/custom-mygrid/"
 Source = "https://github.com/tjorim/python-mygrid-modbus"
 Issues = "https://github.com/tjorim/python-mygrid-modbus/issues"
 
