@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Typed async Modbus TCP client for MyGrid ModuleTwo home batteries"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "mygrid-modbus contributors"}]
 keywords = ["mygrid", "modbus", "battery", "asyncio"]
