@@ -22,14 +22,14 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
-dependencies = ["modbus-connection>=4.12.7,<5"]
+dependencies = ["modbus-connection>=4.12.8,<5"]
 
 [project.scripts]
 mygrid-query = "mygrid_modbus.cli:main"
 
 [project.optional-dependencies]
-tmodbus = ["modbus-connection[tmodbus]>=4.12.7,<5"]
-pymodbus = ["modbus-connection[pymodbus]>=4.12.7,<5"]
+tmodbus = ["modbus-connection[tmodbus]>=4.12.8,<5"]
+pymodbus = ["modbus-connection[pymodbus]>=4.12.8,<5"]
 
 [project.urls]
 Documentation = "https://tjorim.github.io/custom-mygrid/"
@@ -38,7 +38,7 @@ Issues = "https://github.com/tjorim/python-mygrid-modbus/issues"
 
 [dependency-groups]
 dev = [
-    "modbus-connection[tmodbus,pymodbus]==4.12.7",
+    "modbus-connection[tmodbus,pymodbus]==4.12.8",
     "tmodbus==1.1.0",
     "pytest==9.2.0",
     "pytest-asyncio==1.5.0",

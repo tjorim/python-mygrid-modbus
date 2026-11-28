@@ -487,11 +487,11 @@ wheels = [
 
 [[package]]
 name = "modbus-connection"
-version = "4.12.7"
+version = "4.12.8"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1c/ac/9a94683c293c13c7ff28eb8ce0bec4fe0c98c6d66cb00eeba237c9a7d665/modbus_connection-4.12.7.tar.gz", hash = "sha256:794556c938e7c34ae7edeb03cae46a5e777009163e7ca866625f091b398b805b", size = 280044, upload-time = "2026-10-26T16:25:35.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/45/e706b451d3c9a85ed505312e7ffde7a97c11b86b2f53d28e0c47a66ad638/modbus_connection-4.12.8.tar.gz", hash = "sha256:f85988a409d8fbd7d1ff89db9eddab5b443ce456a4e0838291dff0bdfcca2b1c", size = 281189, upload-time = "2026-11-20T17:51:11.085Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/e1/8176458ce5e908ee51532fcc175d669860c29e61841104a586bb03ea9da7/modbus_connection-4.12.7-py3-none-any.whl", hash = "sha256:4c8897acdb65233b293b531aee0212fb574a526d7242ad7e3612fb577cff7bd6", size = 87119, upload-time = "2026-10-26T16:25:33.585Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/0e/6df53de56c6c0a98226e701ec1efa139f59960efdaf02cebfa19d12bd7e2/modbus_connection-4.12.8-py3-none-any.whl", hash = "sha256:40fa4b71dc311f77c9f3a3bdcdf79d050508f4e9de495dbc336ae49c73ad6391", size = 87272, upload-time = "2026-11-20T17:51:09.935Z" },
 ]
 
 [package.optional-dependencies]
@@ -541,16 +541,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "modbus-connection", specifier = ">=4.12.7,<5" },
-    { name = "modbus-connection", extras = ["pymodbus"], marker = "extra == 'pymodbus'", specifier = ">=4.12.7,<5" },
-    { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'tmodbus'", specifier = ">=4.12.7,<5" },
+    { name = "modbus-connection", specifier = ">=4.12.8,<5" },
+    { name = "modbus-connection", extras = ["pymodbus"], marker = "extra == 'pymodbus'", specifier = ">=4.12.8,<5" },
+    { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'tmodbus'", specifier = ">=4.12.8,<5" },
 ]
 provides-extras = ["pymodbus", "tmodbus"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "build", specifier = ">=1.6.1,<2" },
-    { name = "modbus-connection", extras = ["tmodbus", "pymodbus"], specifier = "==4.12.7" },
+    { name = "modbus-connection", extras = ["tmodbus", "pymodbus"], specifier = "==4.12.8" },
     { name = "pytest", specifier = "==9.2.0" },
     { name = "pytest-asyncio", specifier = "==1.5.0" },
     { name = "pytest-cov", specifier = "==7.1.0" },
